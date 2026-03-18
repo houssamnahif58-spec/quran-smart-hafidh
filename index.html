@@ -18,15 +18,14 @@ body {
   margin: 10px;
   border-radius: 15px;
 }
-button {
+button, select {
   padding: 10px;
+  margin: 5px;
   border-radius: 10px;
   border: none;
-  background: green;
-  color: white;
 }
+button { background: green; color: white; }
 </style>
-
 </head>
 
 <body>
@@ -35,57 +34,117 @@ button {
 
 <div class="card">
 <h2>📅 مهمة اليوم</h2>
-<p id="today">سورة الناس</p>
+<p id="surah">الناس</p>
 <button onclick="done()">✅ حفظت</button>
 </div>
 
 <div class="card">
 <h2>🏆 النقاط</h2>
 <p id="points">0</p>
+<h3>🔥 المستوى: <span id="level">1</span></h3>
 </div>
 
 <div class="card">
-<h2>🎧 استمع</h2>
-<audio id="audio" controls>
-  <source src="https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/114.mp3">
-</audio>
+<h2>🎧 القارئ</h2>
+<select onchange="changeReciter(this.value)">
+<option value="afasy">العفاسي</option>
+<option value="sudais">السديس</option>
+</select>
+
+<audio id="audio" controls></audio>
+</div>
+
+<div class="card">
+<h2>🎤 اقرأ الآن</h2>
+<button onclick="startRec()">🎙️ ابدأ</button>
+<p id="result"></p>
 </div>
 
 <script>
 
+// ===== البيانات =====
 const surahs = [
-{ name: "الناس", audio: "114.mp3" },
-{ name: "الفلق", audio: "113.mp3" },
-{ name: "الإخلاص", audio: "112.mp3" }
+{ name: "الناس", text: "قل أعوذ برب الناس", audio: "114.mp3" },
+{ name: "الفلق", text: "قل أعوذ برب الفلق", audio: "113.mp3" },
+{ name: "الإخلاص", text: "قل هو الله أحد", audio: "112.mp3" }
 ];
 
 let index = 0;
 let points = 0;
+let level = 1;
+let reciter = "afasy";
 
+const audio = document.getElementById("audio");
+
+// ===== تحديث الصوت =====
+function updateAudio() {
+  audio.src =
+  "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/" +
+  surahs[index].audio;
+}
+updateAudio();
+
+// ===== حفظ =====
 function done() {
   points += 10;
   index++;
 
+  if (index % 3 === 0) level++;
+
   document.getElementById("points").innerText = points;
+  document.getElementById("level").innerText = level;
 
   if (surahs[index]) {
-    document.getElementById("today").innerText = surahs[index].name;
-    document.getElementById("audio").src =
-      "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/" + surahs[index].audio;
+    document.getElementById("surah").innerText = surahs[index].name;
+    updateAudio();
   } else {
-    document.getElementById("today").innerText = "انتهيت 🎉";
+    document.getElementById("surah").innerText = "🎉 ختمت!";
   }
 }
 
-// إشعارات المتصفح
+// ===== تغيير القارئ =====
+function changeReciter(val) {
+  reciter = val;
+  updateAudio();
+}
+
+// ===== الميكروفون =====
+let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = "ar-SA";
+
+function startRec() {
+  recognition.start();
+}
+
+recognition.onresult = function(event) {
+  let user = event.results[0][0].transcript;
+  document.getElementById("result").innerText = "قلت: " + user;
+
+  check(user);
+};
+
+// ===== التصحيح =====
+function check(user) {
+  let correct = surahs[index].text;
+
+  if (user.includes(correct)) {
+    points += 5;
+    alert("✅ قراءة صحيحة!");
+  } else {
+    alert("❌ عندك خطأ، حاول مرة أخرى");
+  }
+
+  document.getElementById("points").innerText = points;
+}
+
+// ===== إشعارات =====
 if (Notification.permission !== "granted") {
   Notification.requestPermission();
 }
 
-// تذكير ذكي
 setInterval(() => {
   new Notification("📢 راجع سورة " + surahs[Math.floor(Math.random()*surahs.length)].name);
-}, 20000);
+}, 30000);
 
 </script>
 
