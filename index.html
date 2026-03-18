@@ -4,114 +4,92 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Quran Hafidh AI</title>
+<title>Quran AI Pro</title>
 
 <style>
 body {
   font-family: Arial;
-  background: linear-gradient(#020617,#0f172a);
+  background: #020617;
   color: white;
   text-align: center;
 }
 
 .card {
-  background: rgba(30,41,59,0.9);
-  padding: 20px;
-  margin: 12px;
-  border-radius: 20px;
+  background: #1e293b;
+  padding: 15px;
+  margin: 10px;
+  border-radius: 15px;
 }
 
-button {
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
+button, select {
+  padding: 10px;
+  border-radius: 10px;
   margin: 5px;
 }
 
-.primary { background: #22c55e; color: white; }
-.locked { background: gray; }
-
-.progress {
-  background: #1e293b;
-  border-radius: 10px;
-}
-.bar {
-  height: 10px;
-  background: #22c55e;
-  width: 0%;
-  border-radius: 10px;
+.hidden-word {
+  background: black;
+  color: black;
+  border-radius: 5px;
+  padding: 2px 5px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>📖 Quran Hafidh AI</h1>
+<h1>📖 Quran AI Pro</h1>
 
 <div class="card">
-<h2>📅 حزب اليوم</h2>
-<p id="text"></p>
+<h2>📖 عرض القرآن</h2>
 
-<button onclick="startRec()">🎤 اقرأ</button>
-<button id="doneBtn" class="locked" disabled onclick="done()">✅ حفظت</button>
+<select onchange="loadSurah(this.value)">
+  <option value="1">الفاتحة</option>
+  <option value="112">الإخلاص</option>
+  <option value="113">الفلق</option>
+  <option value="114">الناس</option>
+</select>
+
+<button onclick="toggleHide()">🧠 إخفاء كلمات</button>
+
+<p id="quranText"></p>
 </div>
 
 <div class="card">
-<h2>📊 التقدم</h2>
-<div class="progress"><div id="bar" class="bar"></div></div>
-<p id="percent"></p>
-</div>
-
-<div class="card">
-<h2>🏆 النقاط</h2>
-<p id="points"></p>
-<h3>🔥 المستوى: <span id="level"></span></h3>
-</div>
-
-<div class="card">
-<h2>🎧 استمع</h2>
-<audio id="audio" controls></audio>
+<h2>🎤 اقرأ</h2>
+<button onclick="startRec()">ابدأ</button>
+<p id="result"></p>
 </div>
 
 <script>
 
-// ===== بيانات (أول مثال، نقدر نكمل جميع الأحزاب) =====
-const hizb = [
-{
-text: "بسم الله الرحمن الرحيم الحمد لله رب العالمين",
-audio: "001.mp3"
-},
-{
-text: "الرحمن الرحيم مالك يوم الدين",
-audio: "001_2.mp3"
+// ===== تحميل السورة =====
+async function loadSurah(id) {
+  let res = await fetch("https://api.alquran.cloud/v1/surah/" + id);
+  let data = await res.json();
+
+  let text = data.data.ayahs.map(a => a.text).join(" ");
+
+  window.currentText = text;
+  document.getElementById("quranText").innerText = text;
 }
-];
 
-// ===== حالة =====
-let index = localStorage.getItem("index") || 0;
-let points = localStorage.getItem("points") || 0;
-let level = localStorage.getItem("level") || 1;
+// ===== إخفاء كلمات =====
+let hidden = false;
 
-index = parseInt(index);
-points = parseInt(points);
-level = parseInt(level);
+function toggleHide() {
+  let words = currentText.split(" ");
 
-let correctRead = false;
+  if (!hidden) {
+    words = words.map(w => Math.random() > 0.7 ? "____" : w);
+    hidden = true;
+  } else {
+    words = currentText.split(" ");
+    hidden = false;
+  }
 
-// ===== تحديث =====
-function updateUI() {
-  document.getElementById("text").innerText = hizb[index].text;
-  document.getElementById("points").innerText = points;
-  document.getElementById("level").innerText = level;
-
-  let percent = Math.floor((index / hizb.length) * 100);
-  document.getElementById("percent").innerText = percent + "%";
-  document.getElementById("bar").style.width = percent + "%";
-
-  document.getElementById("audio").src =
-  "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/" + hizb[index].audio;
+  document.getElementById("quranText").innerText = words.join(" ");
 }
-updateUI();
 
 // ===== ميكروفون =====
 let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -123,72 +101,35 @@ function startRec() {
 
 recognition.onresult = function(e) {
   let user = e.results[0][0].transcript;
+  document.getElementById("result").innerText = user;
 
-  let correct = hizb[index].text;
-
-  let score = similarity(user, correct);
-
-  if (score > 0.6) {
-    correctRead = true;
-    alert("✅ قراءة جيدة");
-    unlock();
-  } else {
-    alert("❌ حاول مرة أخرى");
-  }
+  check(user);
 };
 
-// ===== مقارنة ذكية =====
-function similarity(a, b) {
-  let longer = a.length > b.length ? a : b;
-  let shorter = a.length > b.length ? b : a;
+// ===== مقارنة بسيطة =====
+function check(user) {
+  if (!currentText) return;
 
-  let same = 0;
-  for (let i = 0; i < shorter.length; i++) {
-    if (shorter[i] === longer[i]) same++;
+  let score = similarity(user, currentText);
+
+  if (score > 0.5) {
+    alert("✅ جيد");
+  } else {
+    alert("❌ فيه أخطاء");
   }
-
-  return same / longer.length;
 }
 
-// ===== فتح الزر =====
-function unlock() {
-  document.getElementById("doneBtn").disabled = false;
-  document.getElementById("doneBtn").classList.remove("locked");
-  document.getElementById("doneBtn").classList.add("primary");
+// ===== similarity =====
+function similarity(a, b) {
+  let same = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (a[i] === b[i]) same++;
+  }
+  return same / b.length;
 }
 
-// ===== حفظ =====
-function done() {
-  if (!correctRead) return;
-
-  index++;
-  points += 10;
-
-  if (index % 5 === 0) level++;
-
-  save();
-  correctRead = false;
-
-  document.getElementById("doneBtn").disabled = true;
-
-  updateUI();
-}
-
-// ===== حفظ =====
-function save() {
-  localStorage.setItem("index", index);
-  localStorage.setItem("points", points);
-  localStorage.setItem("level", level);
-}
-
-// ===== إشعارات =====
-if (Notification.permission !== "granted") {
-  Notification.requestPermission();
-}
-
-setInterval(() => {
-  new Notification("📢 راجع حزب " + (Math.floor(Math.random()*index)+1));
-}, 60000);
+// تحميل أول سورة
+loadSurah(1);
 
 </script>
 
