@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quran Smart Hafidh</title>
+
+<title>Quran Smart Hafidh PRO</title>
 
 <style>
 body {
@@ -12,30 +13,52 @@ body {
   color: white;
   text-align: center;
 }
+
 .card {
   background: #1e293b;
-  padding: 20px;
+  padding: 15px;
   margin: 10px;
   border-radius: 15px;
 }
+
 button, select {
   padding: 10px;
   margin: 5px;
   border-radius: 10px;
   border: none;
 }
+
 button { background: green; color: white; }
+
+.progress {
+  width: 100%;
+  background: #333;
+  border-radius: 10px;
+}
+
+.progress-bar {
+  height: 10px;
+  background: lime;
+  width: 0%;
+  border-radius: 10px;
+}
 </style>
 </head>
 
 <body>
 
-<h1>📖 Quran Smart Hafidh</h1>
+<h1>📖 Quran Smart Hafidh PRO</h1>
 
 <div class="card">
 <h2>📅 مهمة اليوم</h2>
-<p id="surah">الناس</p>
+<p id="surah"></p>
 <button onclick="done()">✅ حفظت</button>
+</div>
+
+<div class="card">
+<h2>📊 التقدم</h2>
+<div class="progress"><div id="bar" class="progress-bar"></div></div>
+<p id="percent">0%</p>
 </div>
 
 <div class="card">
@@ -50,65 +73,66 @@ button { background: green; color: white; }
 <option value="afasy">العفاسي</option>
 <option value="sudais">السديس</option>
 </select>
-
 <audio id="audio" controls></audio>
 </div>
 
 <div class="card">
-<h2>🎤 اقرأ الآن</h2>
+<h2>🎤 اقرأ</h2>
 <button onclick="startRec()">🎙️ ابدأ</button>
 <p id="result"></p>
 </div>
 
 <script>
 
-// ===== البيانات =====
+// ===== بيانات =====
 const surahs = [
-{ name: "الناس", text: "قل أعوذ برب الناس", audio: "114.mp3" },
-{ name: "الفلق", text: "قل أعوذ برب الفلق", audio: "113.mp3" },
-{ name: "الإخلاص", text: "قل هو الله أحد", audio: "112.mp3" }
+{ name:"الناس", text:"قل أعوذ برب الناس", audio:"114.mp3" },
+{ name:"الفلق", text:"قل أعوذ برب الفلق", audio:"113.mp3" },
+{ name:"الإخلاص", text:"قل هو الله أحد", audio:"112.mp3" }
 ];
 
-let index = 0;
-let points = 0;
-let level = 1;
-let reciter = "afasy";
+let index = localStorage.getItem("index") || 0;
+let points = localStorage.getItem("points") || 0;
+let level = localStorage.getItem("level") || 1;
 
 const audio = document.getElementById("audio");
 
-// ===== تحديث الصوت =====
-function updateAudio() {
+// ===== تحديث =====
+function updateUI() {
+  document.getElementById("surah").innerText = surahs[index].name;
+  document.getElementById("points").innerText = points;
+  document.getElementById("level").innerText = level;
+
+  let percent = Math.floor((index / surahs.length) * 100);
+  document.getElementById("percent").innerText = percent + "%";
+  document.getElementById("bar").style.width = percent + "%";
+
   audio.src =
   "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/" +
   surahs[index].audio;
 }
-updateAudio();
+
+updateUI();
 
 // ===== حفظ =====
 function done() {
-  points += 10;
+  points = parseInt(points) + 10;
   index++;
 
-  if (index % 3 === 0) level++;
+  if (index % 2 === 0) level++;
 
-  document.getElementById("points").innerText = points;
-  document.getElementById("level").innerText = level;
-
-  if (surahs[index]) {
-    document.getElementById("surah").innerText = surahs[index].name;
-    updateAudio();
-  } else {
-    document.getElementById("surah").innerText = "🎉 ختمت!";
-  }
+  save();
+  updateUI();
 }
 
-// ===== تغيير القارئ =====
-function changeReciter(val) {
-  reciter = val;
-  updateAudio();
+// ===== حفظ البيانات =====
+function save() {
+  localStorage.setItem("index", index);
+  localStorage.setItem("points", points);
+  localStorage.setItem("level", level);
 }
 
-// ===== الميكروفون =====
+// ===== ميكروفون =====
 let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 recognition.lang = "ar-SA";
 
@@ -116,25 +140,28 @@ function startRec() {
   recognition.start();
 }
 
-recognition.onresult = function(event) {
-  let user = event.results[0][0].transcript;
-  document.getElementById("result").innerText = "قلت: " + user;
+recognition.onresult = function(e) {
+  let user = e.results[0][0].transcript;
+  document.getElementById("result").innerText = user;
 
   check(user);
 };
 
-// ===== التصحيح =====
+// ===== مقارنة محسنة =====
 function check(user) {
   let correct = surahs[index].text;
 
-  if (user.includes(correct)) {
+  let similarity = user.includes(correct);
+
+  if (similarity) {
     points += 5;
-    alert("✅ قراءة صحيحة!");
+    alert("✅ ممتاز!");
   } else {
-    alert("❌ عندك خطأ، حاول مرة أخرى");
+    alert("❌ فيه خطأ، ركز أكثر");
   }
 
-  document.getElementById("points").innerText = points;
+  save();
+  updateUI();
 }
 
 // ===== إشعارات =====
@@ -144,7 +171,7 @@ if (Notification.permission !== "granted") {
 
 setInterval(() => {
   new Notification("📢 راجع سورة " + surahs[Math.floor(Math.random()*surahs.length)].name);
-}, 30000);
+}, 60000);
 
 </script>
 
