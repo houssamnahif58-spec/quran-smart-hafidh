@@ -4,132 +4,183 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Quran AI Pro</title>
+<title>Quran Challenge</title>
 
 <style>
 body {
   font-family: Arial;
   background: #020617;
   color: white;
-  text-align: center;
+  margin: 0;
 }
 
+/* Header */
+.header {
+  padding: 15px;
+  font-size: 20px;
+  background: #0f172a;
+}
+
+/* Cards */
 .card {
   background: #1e293b;
-  padding: 15px;
   margin: 10px;
+  padding: 15px;
   border-radius: 15px;
 }
 
-button, select {
-  padding: 10px;
-  border-radius: 10px;
-  margin: 5px;
+/* Text */
+#text {
+  font-size: 22px;
+  line-height: 2;
 }
 
-.hidden-word {
-  background: black;
-  color: black;
+/* Wrong words */
+.wrong {
+  background: red;
+  padding: 3px;
   border-radius: 5px;
-  padding: 2px 5px;
+}
+
+/* Buttons */
+button {
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  margin: 5px;
+  background: #22c55e;
+  color: white;
+}
+
+/* Progress */
+.bar {
+  height: 10px;
+  background: lime;
+  width: 0%;
+  border-radius: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>📖 Quran AI Pro</h1>
+<div class="header">📖 Quran Challenge</div>
 
 <div class="card">
-<h2>📖 عرض القرآن</h2>
-
-<select onchange="loadSurah(this.value)">
-  <option value="1">الفاتحة</option>
-  <option value="112">الإخلاص</option>
-  <option value="113">الفلق</option>
-  <option value="114">الناس</option>
-</select>
-
-<button onclick="toggleHide()">🧠 إخفاء كلمات</button>
-
-<p id="quranText"></p>
+<h3>📅 الحزب الحالي</h3>
+<p id="hizb">حزب 1</p>
 </div>
 
 <div class="card">
-<h2>🎤 اقرأ</h2>
+<h3>📖 النص</h3>
+<p id="text"></p>
+
+<button onclick="hideWords()">🧠 إخفاء كلمات</button>
+</div>
+
+<div class="card">
+<h3>🎤 اقرأ</h3>
 <button onclick="startRec()">ابدأ</button>
 <p id="result"></p>
 </div>
 
+<div class="card">
+<h3>📊 التقدم</h3>
+<div style="background:#333;border-radius:10px;">
+<div id="bar" class="bar"></div>
+</div>
+<p id="percent"></p>
+</div>
+
+<div class="card">
+<h3>🏆 النقاط</h3>
+<p id="points">0</p>
+</div>
+
 <script>
 
-// ===== تحميل السورة =====
-async function loadSurah(id) {
-  let res = await fetch("https://api.alquran.cloud/v1/surah/" + id);
-  let data = await res.json();
+// ===== بيانات تجريبية =====
+let hizbData = [
+"بسم الله الرحمن الرحيم الحمد لله رب العالمين",
+"الرحمن الرحيم مالك يوم الدين"
+];
 
-  let text = data.data.ayahs.map(a => a.text).join(" ");
-
-  window.currentText = text;
-  document.getElementById("quranText").innerText = text;
-}
-
-// ===== إخفاء كلمات =====
+// ===== حالة =====
+let index = 0;
+let points = 0;
 let hidden = false;
 
-function toggleHide() {
-  let words = currentText.split(" ");
+// ===== عرض =====
+function update() {
+  document.getElementById("hizb").innerText = "حزب " + (index+1);
+  document.getElementById("text").innerText = hizbData[index];
+
+  let percent = Math.floor((index / 60) * 100);
+  document.getElementById("percent").innerText = percent + "%";
+  document.getElementById("bar").style.width = percent + "%";
+}
+
+update();
+
+// ===== إخفاء كلمات =====
+function hideWords() {
+  let words = hizbData[index].split(" ");
 
   if (!hidden) {
     words = words.map(w => Math.random() > 0.7 ? "____" : w);
     hidden = true;
   } else {
-    words = currentText.split(" ");
+    words = hizbData[index].split(" ");
     hidden = false;
   }
 
-  document.getElementById("quranText").innerText = words.join(" ");
+  document.getElementById("text").innerText = words.join(" ");
 }
 
 // ===== ميكروفون =====
-let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-recognition.lang = "ar-SA";
+let rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+rec.lang = "ar-SA";
 
 function startRec() {
-  recognition.start();
+  rec.start();
 }
 
-recognition.onresult = function(e) {
+rec.onresult = function(e) {
   let user = e.results[0][0].transcript;
   document.getElementById("result").innerText = user;
 
-  check(user);
+  compare(user, hizbData[index]);
 };
 
-// ===== مقارنة بسيطة =====
-function check(user) {
-  if (!currentText) return;
+// ===== مقارنة حرفية =====
+function compare(user, correct) {
 
-  let score = similarity(user, currentText);
+  let u = user.split(" ");
+  let c = correct.split(" ");
 
-  if (score > 0.5) {
-    alert("✅ جيد");
-  } else {
-    alert("❌ فيه أخطاء");
+  let result = "";
+
+  for (let i = 0; i < c.length; i++) {
+    if (u[i] !== c[i]) {
+      result += `<span class="wrong">${c[i]}</span> `;
+    } else {
+      result += c[i] + " ";
+    }
+  }
+
+  document.getElementById("text").innerHTML = result;
+
+  if (user.length > correct.length * 0.7) {
+    points += 10;
+    index++;
+    update();
   }
 }
 
-// ===== similarity =====
-function similarity(a, b) {
-  let same = 0;
-  for (let i = 0; i < Math.min(a.length, b.length); i++) {
-    if (a[i] === b[i]) same++;
-  }
-  return same / b.length;
-}
-
-// تحميل أول سورة
-loadSurah(1);
+// إشعار
+setInterval(() => {
+  alert("📢 راجع حزب " + (Math.floor(Math.random()*index)+1));
+}, 60000);
 
 </script>
 
