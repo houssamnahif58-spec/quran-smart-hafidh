@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quran Smart Hafidh</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  text-align: center;
+}
+.card {
+  background: #1e293b;
+  padding: 20px;
+  margin: 10px;
+  border-radius: 15px;
+}
+button {
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: green;
+  color: white;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>📖 Quran Smart Hafidh</h1>
+
+<div class="card">
+<h2>📅 مهمة اليوم</h2>
+<p id="today">سورة الناس</p>
+<button onclick="done()">✅ حفظت</button>
+</div>
+
+<div class="card">
+<h2>🏆 النقاط</h2>
+<p id="points">0</p>
+</div>
+
+<div class="card">
+<h2>🎧 استمع</h2>
+<audio id="audio" controls>
+  <source src="https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/114.mp3">
+</audio>
+</div>
+
+<script>
+
+const surahs = [
+{ name: "الناس", audio: "114.mp3" },
+{ name: "الفلق", audio: "113.mp3" },
+{ name: "الإخلاص", audio: "112.mp3" }
+];
+
+let index = 0;
+let points = 0;
+
+function done() {
+  points += 10;
+  index++;
+
+  document.getElementById("points").innerText = points;
+
+  if (surahs[index]) {
+    document.getElementById("today").innerText = surahs[index].name;
+    document.getElementById("audio").src =
+      "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/" + surahs[index].audio;
+  } else {
+    document.getElementById("today").innerText = "انتهيت 🎉";
+  }
+}
+
+// إشعارات المتصفح
+if (Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+// تذكير ذكي
+setInterval(() => {
+  new Notification("📢 راجع سورة " + surahs[Math.floor(Math.random()*surahs.length)].name);
+}, 20000);
+
+</script>
+
+</body>
+</html>
