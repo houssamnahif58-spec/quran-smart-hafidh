@@ -4,41 +4,40 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Quran Smart Hafidh PRO</title>
+<title>Quran Hafidh PRO+</title>
 
 <style>
 body {
   font-family: Arial;
-  background: #0f172a;
+  background: linear-gradient(#0f172a,#020617);
   color: white;
   text-align: center;
 }
 
 .card {
-  background: #1e293b;
-  padding: 15px;
+  background: rgba(30,41,59,0.8);
+  padding: 20px;
   margin: 10px;
-  border-radius: 15px;
+  border-radius: 20px;
 }
 
-button, select {
-  padding: 10px;
-  margin: 5px;
-  border-radius: 10px;
+button {
+  padding: 12px;
+  border-radius: 12px;
   border: none;
+  margin: 5px;
 }
 
-button { background: green; color: white; }
+.primary { background: #22c55e; color: white; }
+.locked { background: gray; }
 
 .progress {
-  width: 100%;
-  background: #333;
+  background: #1e293b;
   border-radius: 10px;
 }
-
-.progress-bar {
+.bar {
   height: 10px;
-  background: lime;
+  background: #22c55e;
   width: 0%;
   border-radius: 10px;
 }
@@ -47,17 +46,19 @@ button { background: green; color: white; }
 
 <body>
 
-<h1>📖 Quran Smart Hafidh PRO</h1>
+<h1>📖 Quran Hafidh PRO+</h1>
 
 <div class="card">
-<h2>📅 مهمة اليوم</h2>
-<p id="surah"></p>
-<button onclick="done()">✅ حفظت</button>
+<h2>📅 حزب اليوم</h2>
+<p id="current">حزب 1</p>
+
+<button onclick="startRec()">🎤 اقرأ</button>
+<button id="doneBtn" class="locked" onclick="done()" disabled>✅ حفظت</button>
 </div>
 
 <div class="card">
 <h2>📊 التقدم</h2>
-<div class="progress"><div id="bar" class="progress-bar"></div></div>
+<div class="progress"><div id="bar" class="bar"></div></div>
 <p id="percent">0%</p>
 </div>
 
@@ -67,70 +68,27 @@ button { background: green; color: white; }
 <h3>🔥 المستوى: <span id="level">1</span></h3>
 </div>
 
-<div class="card">
-<h2>🎧 القارئ</h2>
-<select onchange="changeReciter(this.value)">
-<option value="afasy">العفاسي</option>
-<option value="sudais">السديس</option>
-</select>
-<audio id="audio" controls></audio>
-</div>
-
-<div class="card">
-<h2>🎤 اقرأ</h2>
-<button onclick="startRec()">🎙️ ابدأ</button>
-<p id="result"></p>
-</div>
-
 <script>
 
-// ===== بيانات =====
-const surahs = [
-{ name:"الناس", text:"قل أعوذ برب الناس", audio:"114.mp3" },
-{ name:"الفلق", text:"قل أعوذ برب الفلق", audio:"113.mp3" },
-{ name:"الإخلاص", text:"قل هو الله أحد", audio:"112.mp3" }
-];
-
+// ===== الأحزاب =====
+let total = 60;
 let index = localStorage.getItem("index") || 0;
 let points = localStorage.getItem("points") || 0;
 let level = localStorage.getItem("level") || 1;
 
-const audio = document.getElementById("audio");
+let correctRead = false;
 
 // ===== تحديث =====
 function updateUI() {
-  document.getElementById("surah").innerText = surahs[index].name;
+  document.getElementById("current").innerText = "حزب " + (parseInt(index)+1);
   document.getElementById("points").innerText = points;
   document.getElementById("level").innerText = level;
 
-  let percent = Math.floor((index / surahs.length) * 100);
+  let percent = Math.floor((index / total) * 100);
   document.getElementById("percent").innerText = percent + "%";
   document.getElementById("bar").style.width = percent + "%";
-
-  audio.src =
-  "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/" +
-  surahs[index].audio;
 }
-
 updateUI();
-
-// ===== حفظ =====
-function done() {
-  points = parseInt(points) + 10;
-  index++;
-
-  if (index % 2 === 0) level++;
-
-  save();
-  updateUI();
-}
-
-// ===== حفظ البيانات =====
-function save() {
-  localStorage.setItem("index", index);
-  localStorage.setItem("points", points);
-  localStorage.setItem("level", level);
-}
 
 // ===== ميكروفون =====
 let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -141,27 +99,44 @@ function startRec() {
 }
 
 recognition.onresult = function(e) {
-  let user = e.results[0][0].transcript;
-  document.getElementById("result").innerText = user;
+  let text = e.results[0][0].transcript;
 
-  check(user);
+  // شرط بسيط (يمكن تطويره)
+  if (text.length > 10) {
+    correctRead = true;
+    alert("✅ قراءة مقبولة");
+
+    document.getElementById("doneBtn").disabled = false;
+    document.getElementById("doneBtn").classList.remove("locked");
+    document.getElementById("doneBtn").classList.add("primary");
+  } else {
+    alert("❌ القراءة قصيرة، حاول مرة أخرى");
+  }
 };
 
-// ===== مقارنة محسنة =====
-function check(user) {
-  let correct = surahs[index].text;
+// ===== حفظ =====
+function done() {
+  if (!correctRead) return;
 
-  let similarity = user.includes(correct);
+  index++;
+  points += 10;
 
-  if (similarity) {
-    points += 5;
-    alert("✅ ممتاز!");
-  } else {
-    alert("❌ فيه خطأ، ركز أكثر");
-  }
+  if (index % 5 === 0) level++;
 
   save();
+  correctRead = false;
+
+  document.getElementById("doneBtn").disabled = true;
+  document.getElementById("doneBtn").classList.add("locked");
+
   updateUI();
+}
+
+// ===== حفظ البيانات =====
+function save() {
+  localStorage.setItem("index", index);
+  localStorage.setItem("points", points);
+  localStorage.setItem("level", level);
 }
 
 // ===== إشعارات =====
@@ -170,7 +145,7 @@ if (Notification.permission !== "granted") {
 }
 
 setInterval(() => {
-  new Notification("📢 راجع سورة " + surahs[Math.floor(Math.random()*surahs.length)].name);
+  new Notification("📢 راجع حزب " + (Math.floor(Math.random()*index)+1));
 }, 60000);
 
 </script>
