@@ -4,20 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Quran Hafidh PRO+</title>
+<title>Quran Hafidh AI</title>
 
 <style>
 body {
   font-family: Arial;
-  background: linear-gradient(#0f172a,#020617);
+  background: linear-gradient(#020617,#0f172a);
   color: white;
   text-align: center;
 }
 
 .card {
-  background: rgba(30,41,59,0.8);
+  background: rgba(30,41,59,0.9);
   padding: 20px;
-  margin: 10px;
+  margin: 12px;
   border-radius: 20px;
 }
 
@@ -46,47 +46,70 @@ button {
 
 <body>
 
-<h1>📖 Quran Hafidh PRO+</h1>
+<h1>📖 Quran Hafidh AI</h1>
 
 <div class="card">
 <h2>📅 حزب اليوم</h2>
-<p id="current">حزب 1</p>
+<p id="text"></p>
 
 <button onclick="startRec()">🎤 اقرأ</button>
-<button id="doneBtn" class="locked" onclick="done()" disabled>✅ حفظت</button>
+<button id="doneBtn" class="locked" disabled onclick="done()">✅ حفظت</button>
 </div>
 
 <div class="card">
 <h2>📊 التقدم</h2>
 <div class="progress"><div id="bar" class="bar"></div></div>
-<p id="percent">0%</p>
+<p id="percent"></p>
 </div>
 
 <div class="card">
 <h2>🏆 النقاط</h2>
-<p id="points">0</p>
-<h3>🔥 المستوى: <span id="level">1</span></h3>
+<p id="points"></p>
+<h3>🔥 المستوى: <span id="level"></span></h3>
+</div>
+
+<div class="card">
+<h2>🎧 استمع</h2>
+<audio id="audio" controls></audio>
 </div>
 
 <script>
 
-// ===== الأحزاب =====
-let total = 60;
+// ===== بيانات (أول مثال، نقدر نكمل جميع الأحزاب) =====
+const hizb = [
+{
+text: "بسم الله الرحمن الرحيم الحمد لله رب العالمين",
+audio: "001.mp3"
+},
+{
+text: "الرحمن الرحيم مالك يوم الدين",
+audio: "001_2.mp3"
+}
+];
+
+// ===== حالة =====
 let index = localStorage.getItem("index") || 0;
 let points = localStorage.getItem("points") || 0;
 let level = localStorage.getItem("level") || 1;
+
+index = parseInt(index);
+points = parseInt(points);
+level = parseInt(level);
 
 let correctRead = false;
 
 // ===== تحديث =====
 function updateUI() {
-  document.getElementById("current").innerText = "حزب " + (parseInt(index)+1);
+  document.getElementById("text").innerText = hizb[index].text;
   document.getElementById("points").innerText = points;
   document.getElementById("level").innerText = level;
 
-  let percent = Math.floor((index / total) * 100);
+  let percent = Math.floor((index / hizb.length) * 100);
   document.getElementById("percent").innerText = percent + "%";
   document.getElementById("bar").style.width = percent + "%";
+
+  document.getElementById("audio").src =
+  "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/" + hizb[index].audio;
 }
 updateUI();
 
@@ -99,20 +122,40 @@ function startRec() {
 }
 
 recognition.onresult = function(e) {
-  let text = e.results[0][0].transcript;
+  let user = e.results[0][0].transcript;
 
-  // شرط بسيط (يمكن تطويره)
-  if (text.length > 10) {
+  let correct = hizb[index].text;
+
+  let score = similarity(user, correct);
+
+  if (score > 0.6) {
     correctRead = true;
-    alert("✅ قراءة مقبولة");
-
-    document.getElementById("doneBtn").disabled = false;
-    document.getElementById("doneBtn").classList.remove("locked");
-    document.getElementById("doneBtn").classList.add("primary");
+    alert("✅ قراءة جيدة");
+    unlock();
   } else {
-    alert("❌ القراءة قصيرة، حاول مرة أخرى");
+    alert("❌ حاول مرة أخرى");
   }
 };
+
+// ===== مقارنة ذكية =====
+function similarity(a, b) {
+  let longer = a.length > b.length ? a : b;
+  let shorter = a.length > b.length ? b : a;
+
+  let same = 0;
+  for (let i = 0; i < shorter.length; i++) {
+    if (shorter[i] === longer[i]) same++;
+  }
+
+  return same / longer.length;
+}
+
+// ===== فتح الزر =====
+function unlock() {
+  document.getElementById("doneBtn").disabled = false;
+  document.getElementById("doneBtn").classList.remove("locked");
+  document.getElementById("doneBtn").classList.add("primary");
+}
 
 // ===== حفظ =====
 function done() {
@@ -127,12 +170,11 @@ function done() {
   correctRead = false;
 
   document.getElementById("doneBtn").disabled = true;
-  document.getElementById("doneBtn").classList.add("locked");
 
   updateUI();
 }
 
-// ===== حفظ البيانات =====
+// ===== حفظ =====
 function save() {
   localStorage.setItem("index", index);
   localStorage.setItem("points", points);
